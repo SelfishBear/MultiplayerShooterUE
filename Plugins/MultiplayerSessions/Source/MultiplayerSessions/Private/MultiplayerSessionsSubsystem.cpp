@@ -19,7 +19,9 @@ UMultiplayerSessionsSubsystem::UMultiplayerSessionsSubsystem() :
 	OnStartSessionCompleteDelegate(
 		FOnStartSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnStartSessionComplete)),
 	OnDestroySessionCompleteDelegate(
-		FOnDestroySessionCompleteDelegate::CreateUObject(this, &ThisClass::OnDestroySessionComplete))
+		FOnDestroySessionCompleteDelegate::CreateUObject(this, &ThisClass::OnDestroySessionComplete)),
+	OnSessionUserInviteAcceptedDelegate(
+		FOnSessionUserInviteAcceptedDelegate::CreateUObject(this, &ThisClass::OnSessionUserInviteAcceptedComplete))
 {
 }
 
@@ -44,11 +46,21 @@ void UMultiplayerSessionsSubsystem::InitSessionInterface()
 	if (!OnlineSubsystem) return;
 
 	SessionInterface = OnlineSubsystem->GetSessionInterface();
+
+	if (SessionInterface)
+	{
+		OnSessionUserInviteAcceptedDelegateHandle = SessionInterface->AddOnSessionUserInviteAcceptedDelegate_Handle(
+			OnSessionUserInviteAcceptedDelegate);
+	}
 }
 
 void UMultiplayerSessionsSubsystem::ResetSessionInterface()
 {
 	if (!SessionInterface) return;
+
+	SessionInterface->ClearOnSessionUserInviteAcceptedDelegate_Handle(
+		OnSessionUserInviteAcceptedDelegateHandle
+	);
 
 	SessionInterface.Reset();
 }
@@ -79,6 +91,8 @@ void UMultiplayerSessionsSubsystem::CreateSession(int32 NumPublicConnections, FS
 	LastSessionSettings->bUseLobbiesIfAvailable = true;
 	LastSessionSettings->bShouldAdvertise = true;
 	LastSessionSettings->bUsesPresence = true;
+	LastSessionSettings->bAllowInvites = true;
+	LastSessionSettings->bAllowJoinViaPresenceFriendsOnly = false;
 	LastSessionSettings->Set(FName("MatchType"), MatchType, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 	LastSessionSettings->BuildUniqueId = 1;
 
@@ -115,6 +129,7 @@ void UMultiplayerSessionsSubsystem::FindSessions(int32 MaxSearchResults)
 
 		OnMultiplayerFindSessionsComplete.Broadcast(TArray<FOnlineSessionSearchResult>(), false);
 	}
+	
 }
 
 void UMultiplayerSessionsSubsystem::JoinSession(const FOnlineSessionSearchResult& Result)
@@ -124,13 +139,18 @@ void UMultiplayerSessionsSubsystem::JoinSession(const FOnlineSessionSearchResult
 		OnMultiplayerJoinSessionComplete.Broadcast(EOnJoinSessionCompleteResult::UnknownError);
 		return;
 	}
+	
+	FOnlineSessionSearchResult CompatibleResult = Result;
+	CompatibleResult.Session.SessionSettings.bUsesPresence = true;
+	CompatibleResult.Session.SessionSettings.bUseLobbiesIfAvailable = true;
 
 	OnJoinSessionCompleteDelegateHandle = SessionInterface->AddOnJoinSessionCompleteDelegate_Handle(
 		OnJoinSessionCompleteDelegate);
+
 	ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
 	if (!LocalPlayer) return;
-
-	if (!SessionInterface->JoinSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, Result))
+	
+	if (!SessionInterface->JoinSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, CompatibleResult))
 	{
 		SessionInterface->ClearOnJoinSessionCompleteDelegate_Handle(OnJoinSessionCompleteDelegateHandle);
 
@@ -147,6 +167,7 @@ void UMultiplayerSessionsSubsystem::DestroySession()
 	if (!SessionInterface)
 	{
 		OnMultiplayerDestroySessionComplete.Broadcast(false);
+		bCreateSessionOnDestroy = false;
 		return;
 	}
 
@@ -156,7 +177,7 @@ void UMultiplayerSessionsSubsystem::DestroySession()
 	if (!SessionInterface->DestroySession(NAME_GameSession))
 	{
 		SessionInterface->ClearOnDestroySessionCompleteDelegate_Handle(OnDestroySessionCompleteDelegateHandle);
-
+		bCreateSessionOnDestroy = false;
 		OnMultiplayerDestroySessionComplete.Broadcast(false);
 	}
 }
@@ -209,6 +230,21 @@ void UMultiplayerSessionsSubsystem::OnDestroySessionComplete(FName SessionName, 
 		bCreateSessionOnDestroy = false;
 		CreateSession(LastNumPublicConnections, LastMatchType);
 	}
-	
-	OnMultiplayerDestroySessionComplete.Broadcast(bWasSuccessful);	
+
+	OnMultiplayerDestroySessionComplete.Broadcast(bWasSuccessful);
+}
+
+void UMultiplayerSessionsSubsystem::OnSessionUserInviteAcceptedComplete(bool bWasSuccessful, int32 LocalUserNum,
+                                                                        FUniqueNetIdPtr UserId,
+                                                                        const FOnlineSessionSearchResult& InviteResult)
+{
+	if (!bWasSuccessful || !InviteResult.IsValid())
+	{
+		OnMultiplayerJoinSessionComplete.Broadcast(
+			EOnJoinSessionCompleteResult::UnknownError
+		);
+		return;
+	}
+
+	JoinSession(InviteResult);
 }

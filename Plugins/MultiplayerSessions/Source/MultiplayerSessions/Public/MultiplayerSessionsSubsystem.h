@@ -48,6 +48,7 @@ protected:
 	void OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
 	void OnStartSessionComplete(FName SessionName, bool bWasSuccessful);
 	void OnDestroySessionComplete(FName SessionName, bool bWasSuccessful);
+	void OnSessionUserInviteAcceptedComplete(bool bWasSuccessful, int32 LocalUserNum, FUniqueNetIdPtr UserId, const FOnlineSessionSearchResult& InviteResult);
 
 private:
 	IOnlineSessionPtr SessionInterface;
@@ -59,17 +60,19 @@ private:
 	FOnJoinSessionCompleteDelegate OnJoinSessionCompleteDelegate;
 	FOnStartSessionCompleteDelegate OnStartSessionCompleteDelegate;
 	FOnDestroySessionCompleteDelegate OnDestroySessionCompleteDelegate;
+	FOnSessionUserInviteAcceptedDelegate OnSessionUserInviteAcceptedDelegate;
 
 	FDelegateHandle OnCreateSessionCompleteDelegateHandle;
 	FDelegateHandle OnFindSessionsCompleteDelegateHandle;
 	FDelegateHandle OnJoinSessionCompleteDelegateHandle;
 	FDelegateHandle OnStartSessionCompleteDelegateHandle;
 	FDelegateHandle OnDestroySessionCompleteDelegateHandle;
+	FDelegateHandle OnSessionUserInviteAcceptedDelegateHandle;
 
 
 	void InitSessionInterface();
 	void ResetSessionInterface();
-	
+
 	bool bCreateSessionOnDestroy = false;
 	int32 LastNumPublicConnections;
 	FString LastMatchType;
