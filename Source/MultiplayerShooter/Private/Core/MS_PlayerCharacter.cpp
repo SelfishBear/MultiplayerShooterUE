@@ -25,7 +25,8 @@ AMS_PlayerCharacter::AMS_PlayerCharacter()
 	CameraComponent->SetupAttachment(SpringArmComponent);
 	CameraComponent->bUsePawnControlRotation = false;
 
-	GetCharacterMovement()->bUseControllerDesiredRotation = false;
+	GetCharacterMovement()->bUseControllerDesiredRotation = true;
+	GetCharacterMovement()->bOrientRotationToMovement = true;
 
 	HealthComponent = CreateDefaultSubobject<UMS_HealthComponent>("HealthComponent");
 	CombatComponent = CreateDefaultSubobject<UMS_CombatComponent>("CombatComponent");
@@ -72,6 +73,7 @@ void AMS_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		                                   &AMS_PlayerCharacter::StartAim);
 		EnhancedInputComponent->BindAction(AimInputAction, ETriggerEvent::Completed, this,
 		                                   &AMS_PlayerCharacter::StopAim);
+		EnhancedInputComponent->BindAction(FireInputAction, ETriggerEvent::Started, this, &AMS_PlayerCharacter::Fire);
 	}
 	else
 	{
@@ -159,6 +161,9 @@ void AMS_PlayerCharacter::StopAim()
 
 void AMS_PlayerCharacter::Fire()
 {
+	if (!CombatComponent) return; 
+	
+	CombatComponent->RequestFire();
 }
 
 void AMS_PlayerCharacter::Reload()
@@ -175,7 +180,6 @@ void AMS_PlayerCharacter::ApplyAimingMovementSettings()
 	Movement->MaxWalkSpeed = CombatComponent->IsAiming()
 		                         ? MovementSettings.AimMaxWalkSpeed
 		                         : MovementSettings.DefaultMaxWalkSpeed;
-	
-	Movement->bUseControllerDesiredRotation = CombatComponent->IsAiming();
+
 	Movement->bOrientRotationToMovement = !CombatComponent->IsAiming();
 }
