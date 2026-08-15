@@ -24,4 +24,6 @@ void AMS_BaseHUD::InitHUDWidget()
 	PlayerBaseHUDWidget = CreateWidget(PlayerController, PlayerBaseHUDWidgetClass);
 
 	PlayerBaseHUDWidget->AddToViewport();
+
+	OnBaseHUDWidgetInitialized.Broadcast(PlayerBaseHUDWidget);
 }

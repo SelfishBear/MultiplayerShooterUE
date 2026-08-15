@@ -57,13 +57,7 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputAction> JumpInputAction;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
-	TObjectPtr<UInputAction> CrouchInputAction;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
-	TObjectPtr<UInputAction> SprintInputAction;
-
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputAction> AimInputAction;
 
@@ -82,13 +76,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Combat")
 	FORCEINLINE UMS_CombatComponent* GetCombatComponent() const { return CombatComponent; }
 
+	UFUNCTION(NetMulticast, Unreliable)
+	void HandleDeathEffect();
+	
+	UFUNCTION(BlueprintImplementableEvent, Category="VFX")
+	void PlayDeathEffects();
+	
 	void ApplyAimingMovementSettings();
 	
 protected:
 	virtual void BeginPlay() override;
-
-	virtual void Tick(float DeltaTime) override;
-
+	
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	virtual void UnPossessed() override;
@@ -111,4 +109,9 @@ private:
 	void Fire();
 	void Reload();
 	
+	UFUNCTION()
+	void HandleCharacterDeath(AActor* DamageCauser);
+	
+	UFUNCTION()
+	void HandleRespawnCharacter();
 };

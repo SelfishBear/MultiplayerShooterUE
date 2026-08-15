@@ -17,6 +17,11 @@ class MULTIPLAYERSHOOTER_API AMS_LobbyGameMode : public AGameMode
 public:
 	AMS_LobbyGameMode();
 	
+	void StartGame();
+	
 protected:
 	virtual void PostLogin(APlayerController* NewPlayer) override;
+	
+private:
+	void Travel();
 };

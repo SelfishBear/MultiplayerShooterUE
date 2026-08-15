@@ -8,9 +8,11 @@
 #include "Camera/CameraComponent.h"
 #include "Components/MS_CombatComponent.h"
 #include "Components/MS_HealthComponent.h"
+#include "Core/MS_MainGameMode.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 
+class AMS_MainGameMode;
 class UEnhancedInputLocalPlayerSubsystem;
 
 AMS_PlayerCharacter::AMS_PlayerCharacter()
@@ -39,11 +41,6 @@ void AMS_PlayerCharacter::BeginPlay()
 	InitializeHealth();
 }
 
-void AMS_PlayerCharacter::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-}
-
 void AMS_PlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	UnbindMappingContext();
@@ -52,8 +49,8 @@ void AMS_PlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void AMS_PlayerCharacter::UnPossessed()
 {
-	Super::UnPossessed();
 	UnbindMappingContext();
+	Super::UnPossessed();
 }
 
 void AMS_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -86,7 +83,10 @@ void AMS_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 
 void AMS_PlayerCharacter::InitializeHealth()
 {
+	if (!HasAuthority()) return;
 	HealthComponent->InitializeHealth();
+	HealthComponent->OnDeath.AddDynamic(this, &AMS_PlayerCharacter::HandleCharacterDeath);
+	HealthComponent->OnRespawned.AddDynamic(this, &AMS_PlayerCharacter::HandleRespawnCharacter);
 }
 
 void AMS_PlayerCharacter::BindMappingContext()
@@ -161,9 +161,9 @@ void AMS_PlayerCharacter::StopAim()
 
 void AMS_PlayerCharacter::Fire()
 {
-	if (!CombatComponent) return; 
-	
-	CombatComponent->RequestFire();
+	if (!CombatComponent) return;
+
+	CombatComponent->TryFire();
 }
 
 void AMS_PlayerCharacter::Reload()
@@ -182,4 +182,23 @@ void AMS_PlayerCharacter::ApplyAimingMovementSettings()
 		                         : MovementSettings.DefaultMaxWalkSpeed;
 
 	Movement->bOrientRotationToMovement = !CombatComponent->IsAiming();
+}
+
+void AMS_PlayerCharacter::HandleCharacterDeath(AActor* DamageCauser)
+{
+	HandleDeathEffect();
+	if (AMS_MainGameMode* MainGameMode = GetWorld()->GetAuthGameMode<AMS_MainGameMode>())
+	{
+		MainGameMode->RespawnCharacter(GetController(), GetHealthComponent());
+	}
+}
+
+void AMS_PlayerCharacter::HandleRespawnCharacter()
+{
+	HealthComponent->RequestResetHeath();
+}
+
+void AMS_PlayerCharacter::HandleDeathEffect_Implementation()
+{
+	PlayDeathEffects();
 }

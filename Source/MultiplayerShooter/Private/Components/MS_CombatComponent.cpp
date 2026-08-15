@@ -3,8 +3,12 @@
 
 #include "Components/MS_CombatComponent.h"
 
+#include "NiagaraFunctionLibrary.h"
 #include "Components/MS_HealthComponent.h"
 #include "Core/MS_PlayerCharacter.h"
+#include "DataAssets/MS_ShootSoundDataAsset.h"
+#include "DataAssets/MS_SurfaceVFXDataAsset.h"
+#include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 
 UMS_CombatComponent::UMS_CombatComponent()
@@ -64,6 +68,42 @@ void UMS_CombatComponent::RequestFire()
 	}
 }
 
+void UMS_CombatComponent::HandleFireState()
+{
+	if (GetWorld()->GetTimerManager().IsTimerActive(FireTimerHandle))
+	{
+		return;
+	}
+	SetCanFire(false);
+	GetWorld()->GetTimerManager().SetTimer(FireTimerHandle, this, &UMS_CombatComponent::HandleFireTimer, ShootCooldown,
+	                                       false);
+}
+
+bool UMS_CombatComponent::TryFire()
+{
+	if (!CanFire()) return false;
+
+	HandleFireState();
+	RequestFire();
+	return true;
+}
+
+void UMS_CombatComponent::PlayFireCosmetics_Implementation()
+{
+	AMS_PlayerCharacter* PlayerCharacter = Cast<AMS_PlayerCharacter>(GetOwner());
+	if (!PlayerCharacter) return;
+
+	USkeletalMeshComponent* Mesh = PlayerCharacter->GetMesh();
+
+	if (!Mesh) return;
+
+	UAnimInstance* AnimInstance = Mesh->GetAnimInstance();
+
+	if (!AnimInstance) return;
+
+	AnimInstance->Montage_Play(FireMontage);
+}
+
 void UMS_CombatComponent::SetAiming(bool NewIsAiming)
 {
 	bIsAiming = NewIsAiming;
@@ -104,6 +144,9 @@ void UMS_CombatComponent::PerformServerFire(const FVector& TraceTarget)
 
 	if (!Shooter || !Shooter->HasAuthority()) return;
 
+	PlayFireCosmetics();
+	PlayShootSound();
+
 	AController* Controller = Shooter->GetController();
 	if (!Controller) return;
 
@@ -120,6 +163,7 @@ void UMS_CombatComponent::PerformServerFire(const FVector& TraceTarget)
 	FCollisionQueryParams CollisionParams;
 	CollisionParams.AddIgnoredActor(Shooter);
 	CollisionParams.bTraceComplex = true;
+	CollisionParams.bReturnPhysicalMaterial = true;
 
 	FHitResult HitResult;
 
@@ -130,6 +174,8 @@ void UMS_CombatComponent::PerformServerFire(const FVector& TraceTarget)
 
 	if (!bHit) return;
 
+	PlayHitVFX(HitResult);
+
 	AMS_PlayerCharacter* HitCharacter = Cast<AMS_PlayerCharacter>(HitResult.GetActor());
 	if (!HitCharacter) return;
 
@@ -139,8 +185,16 @@ void UMS_CombatComponent::PerformServerFire(const FVector& TraceTarget)
 		{
 			GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, "Hit Health Comp");
 		}
-		HealthComponent->RequestHealthChange(-Damage);
+
+		FDamageHitEvent DamageHitEvent = DamageEvent;
+		DamageHitEvent.DamageCauser = Shooter;
+		HealthComponent->RequestTakeDamage(DamageHitEvent);
 	}
+}
+
+void UMS_CombatComponent::HandleFireTimer()
+{
+	SetCanFire(true);
 }
 
 void UMS_CombatComponent::DebugTrace()
@@ -168,4 +222,27 @@ void UMS_CombatComponent::DebugTrace()
 
 	const FVector TraceTarget = WorldLocation + (WorldDirection * TraceDistance);
 	DrawDebugLine(GetWorld(), WorldLocation, TraceTarget, FColor::Red);
+}
+
+void UMS_CombatComponent::PlayHitVFX_Implementation(const FHitResult& HitResult)
+{
+	UPhysicalMaterial* PhysMaterial = HitResult.PhysMaterial.Get();
+
+	if (!PhysMaterial) return;
+
+	EPhysicalSurface SurfaceType = UPhysicalMaterial::DetermineSurfaceType(PhysMaterial);
+
+	if (!HitEffect->SurfaceEffects.Contains(SurfaceType)) return;
+
+	FParticleData ParticleData = HitEffect->SurfaceEffects[SurfaceType];
+
+	UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ParticleData.VFX, HitResult.ImpactPoint,
+	                                         HitResult.ImpactNormal.Rotation(), ParticleData.InitialEffectScale);
+}
+
+void UMS_CombatComponent::PlayShootSound_Implementation()
+{
+	if (!ShootSound) return;
+
+	UGameplayStatics::PlaySound2D(GetWorld(), ShootSound->ShootSoundCue);
 }
