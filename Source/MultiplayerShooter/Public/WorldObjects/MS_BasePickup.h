@@ -47,6 +47,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Data")
 	float RestoreDelay = 10.0f;
+	
+	UFUNCTION(BlueprintImplementableEvent, Category="VFX|Sound")
+	void PlayPickUpCosmetics();
 
 protected:
 	virtual void BeginPlay() override;

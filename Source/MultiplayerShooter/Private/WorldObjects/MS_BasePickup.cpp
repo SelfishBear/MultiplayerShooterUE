@@ -2,7 +2,6 @@
 
 
 #include "WorldObjects/MS_BasePickup.h"
-
 #include "Components/BoxComponent.h"
 
 AMS_BasePickup::AMS_BasePickup()
@@ -47,6 +46,7 @@ void AMS_BasePickup::Pickup(ACharacter* PickingCharacter)
 
 void AMS_BasePickup::OnPickUp()
 {
+	PlayPickUpCosmetics();
 	SetActorHiddenInGame(true);
 
 	BoxCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
