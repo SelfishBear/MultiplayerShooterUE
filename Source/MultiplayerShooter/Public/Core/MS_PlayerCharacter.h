@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "MS_PlayerCharacter.generated.h"
 
+class UMS_AmmoComponent;
 class UMS_CombatComponent;
 class UMS_HealthComponent;
 struct FInputActionValue;
@@ -18,10 +19,10 @@ USTRUCT(Blueprintable)
 struct FMovementSettings
 {
 	GENERATED_BODY()
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Movement")
 	float DefaultMaxWalkSpeed = 600.0f;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Movement")
 	float AimMaxWalkSpeed = 300.0f;
 };
@@ -36,6 +37,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Components")
 	TObjectPtr<UMS_CombatComponent> CombatComponent;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Components")
+	TObjectPtr<UMS_AmmoComponent> AmmoComponent;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Components")
 	TObjectPtr<UMS_HealthComponent> HealthComponent;
@@ -57,7 +61,7 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputAction> JumpInputAction;
-	
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputAction> AimInputAction;
 
@@ -66,32 +70,56 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputAction> ReloadInputAction;
-	
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
+	TObjectPtr<UInputAction> MouseWheelSensitivityAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
+	float MouseSensitivity = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input", meta=(ClampMin = 0.01, ClampMax = 1.0))
+	float MouseSensitivityStep = 0.1;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
+	float MinMouseSensitivity = 0.2f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
+	float MaxMouseSensitivity = 3.0f;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Movement")
 	FMovementSettings MovementSettings;
-	
+
 	UFUNCTION(BlueprintCallable, Category="Health")
 	FORCEINLINE UMS_HealthComponent* GetHealthComponent() const { return HealthComponent; }
 
 	UFUNCTION(BlueprintCallable, Category="Combat")
 	FORCEINLINE UMS_CombatComponent* GetCombatComponent() const { return CombatComponent; }
 
+	UFUNCTION(BlueprintCallable, Category="Ammo")
+	FORCEINLINE UMS_AmmoComponent* GetAmmoComponent() const { return AmmoComponent; }
+
 	UFUNCTION(NetMulticast, Unreliable)
 	void HandleDeathEffect();
-	
+
 	UFUNCTION(BlueprintImplementableEvent, Category="VFX")
 	void PlayDeathEffects();
-	
+
 	void ApplyAimingMovementSettings();
-	
+
 protected:
 	virtual void BeginPlay() override;
-	
+
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	virtual void UnPossessed() override;
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	UFUNCTION()
+	void OnCharacterCapsuleOverlap(
+		UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
+		const FHitResult& SweepResult);
 
 private:
 	void InitializeHealth();
@@ -100,18 +128,22 @@ private:
 	void UnbindMappingContext();
 
 	void Move(const FInputActionValue& Value);
-	
+
 	void Look(const FInputActionValue& Value);
-	
+
 	void StartAim();
 	void StopAim();
 
 	void Fire();
 	void Reload();
-	
+
+	void ChangeMouseSensitivity(const FInputActionValue& Value);
+
 	UFUNCTION()
 	void HandleCharacterDeath(AActor* DamageCauser);
-	
+
 	UFUNCTION()
 	void HandleRespawnCharacter();
+
+	void HandleReward(AActor* RewardTo);
 };

@@ -16,13 +16,19 @@ class MULTIPLAYERSHOOTER_API AMS_PlayerState : public APlayerState
 
 public:
 	UFUNCTION(BlueprintCallable)
-	void RequestDataChange();
-
-	UFUNCTION(BlueprintCallable)
 	void RequestReadyState();
 
+	UFUNCTION(Category="Data")
+	void ServerAddKills(int32 Amount);
+
+	UFUNCTION(Category="Data")
+	void ServerAddDeath(int32 Amount);
+
+	UFUNCTION(Category="Data")
+	void ServerAddScore(int32 Amount);
+	
 	UFUNCTION(BlueprintCallable, Category="Data")
-	FORCEINLINE float GetPlayerScore() const { return PlayerScore; }
+	FORCEINLINE int32 GetPlayerScore() const { return PlayerScore; }
 
 	UFUNCTION(BlueprintCallable, Category="Data")
 	FORCEINLINE int32 GetDeaths() const { return Deaths; }
@@ -59,14 +65,14 @@ protected:
 
 	UFUNCTION()
 	void OnRep_Deaths();
-	
+
 	UFUNCTION()
 	void OnRep_IsReady();
 
 private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Data", meta=(AllowPrivateAccess=true),
 		ReplicatedUsing=OnRep_PlayerScore)
-	float PlayerScore = 0;
+	int32 PlayerScore = 0;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Data", meta=(AllowPrivateAccess=true),
 		ReplicatedUsing=OnRep_Kills)

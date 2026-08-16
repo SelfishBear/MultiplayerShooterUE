@@ -41,6 +41,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="VFX")
 	TObjectPtr<UMS_SurfaceVFXDataAsset> HitEffect;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="VFX")
+	TObjectPtr<UNiagaraSystem> TracerEffect;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Sound")
 	TObjectPtr<UMS_ShootSoundDataAsset> ShootSound;
 
@@ -90,6 +93,9 @@ protected:
 
 	UFUNCTION(NetMulticast, Unreliable)
 	void PlayHitVFX(const FHitResult& HitResult);
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void PlayTracer(FVector_NetQuantize Start, FVector_NetQuantize End);
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Combat", meta=(AllowPrivateAccess=true),

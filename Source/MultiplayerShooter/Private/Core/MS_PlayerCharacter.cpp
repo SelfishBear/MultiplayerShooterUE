@@ -4,15 +4,34 @@
 #include "MultiplayerShooter/Public/Core/MS_PlayerCharacter.h"
 
 #include "EnhancedInputComponent.h"
+
 #include "EnhancedInputSubsystems.h"
+
 #include "Camera/CameraComponent.h"
+
+#include "Components/CapsuleComponent.h"
+
+#include "Components/MS_AmmoComponent.h"
+
 #include "Components/MS_CombatComponent.h"
+
 #include "Components/MS_HealthComponent.h"
+
 #include "Core/MS_MainGameMode.h"
+
+#include "Core/MS_PlayerState.h"
+
 #include "GameFramework/CharacterMovementComponent.h"
+
 #include "GameFramework/SpringArmComponent.h"
+#include "Interfaces/MS_Pickable.h"
+
+#include "Subsystems/MS_RewardSubsystem.h"
+
+#include "Utils/MS_RewardSettings.h"
 
 class AMS_MainGameMode;
+
 class UEnhancedInputLocalPlayerSubsystem;
 
 AMS_PlayerCharacter::AMS_PlayerCharacter()
@@ -30,8 +49,11 @@ AMS_PlayerCharacter::AMS_PlayerCharacter()
 	GetCharacterMovement()->bUseControllerDesiredRotation = true;
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 
+	GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &AMS_PlayerCharacter::OnCharacterCapsuleOverlap);
+
 	HealthComponent = CreateDefaultSubobject<UMS_HealthComponent>("HealthComponent");
 	CombatComponent = CreateDefaultSubobject<UMS_CombatComponent>("CombatComponent");
+	AmmoComponent = CreateDefaultSubobject<UMS_AmmoComponent>("AmmoComponent");
 }
 
 void AMS_PlayerCharacter::BeginPlay()
@@ -53,6 +75,21 @@ void AMS_PlayerCharacter::UnPossessed()
 	Super::UnPossessed();
 }
 
+void AMS_PlayerCharacter::OnCharacterCapsuleOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+                                                    UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
+                                                    bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (!HasAuthority()) return;
+	if (!IsValid(OtherActor)) return;
+	if (OtherActor->Implements<UMS_Pickable>())
+	{
+		if (IMS_Pickable* Pickable = Cast<IMS_Pickable>(OtherActor))
+		{
+			Pickable->Pickup(this);
+		}
+	}
+}
+
 void AMS_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
@@ -71,6 +108,10 @@ void AMS_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		EnhancedInputComponent->BindAction(AimInputAction, ETriggerEvent::Completed, this,
 		                                   &AMS_PlayerCharacter::StopAim);
 		EnhancedInputComponent->BindAction(FireInputAction, ETriggerEvent::Started, this, &AMS_PlayerCharacter::Fire);
+		EnhancedInputComponent->BindAction(ReloadInputAction, ETriggerEvent::Started, this,
+		                                   &AMS_PlayerCharacter::Reload);
+		EnhancedInputComponent->BindAction(MouseWheelSensitivityAction, ETriggerEvent::Triggered, this,
+		                                   &AMS_PlayerCharacter::ChangeMouseSensitivity);
 	}
 	else
 	{
@@ -141,13 +182,14 @@ void AMS_PlayerCharacter::Look(const FInputActionValue& Value)
 	if (LookVector.IsZero()) return;
 	if (!Controller) return;
 
-	AddControllerYawInput(LookVector.X);
-	AddControllerPitchInput(LookVector.Y);
+	AddControllerYawInput(LookVector.X * MouseSensitivity);
+	AddControllerPitchInput(LookVector.Y * MouseSensitivity);
 }
 
 void AMS_PlayerCharacter::StartAim()
 {
 	if (!CombatComponent) return;
+	if (AmmoComponent->IsReloading()) return;
 
 	CombatComponent->SetAiming(true);
 }
@@ -162,12 +204,21 @@ void AMS_PlayerCharacter::StopAim()
 void AMS_PlayerCharacter::Fire()
 {
 	if (!CombatComponent) return;
+	if (!CombatComponent->IsAiming()) return;
+	if (!AmmoComponent->IsEnoughAmmo()) return;
+	if (AmmoComponent->IsReloading()) return;
 
+	AmmoComponent->RequestSpendAmmo();
 	CombatComponent->TryFire();
 }
 
 void AMS_PlayerCharacter::Reload()
 {
+	if (!AmmoComponent) return;
+	if (!AmmoComponent->CanReload()) return;
+	if (AmmoComponent->IsReloading()) return;
+
+	AmmoComponent->RequestPlayReloadMontage();
 }
 
 void AMS_PlayerCharacter::ApplyAimingMovementSettings()
@@ -187,6 +238,8 @@ void AMS_PlayerCharacter::ApplyAimingMovementSettings()
 void AMS_PlayerCharacter::HandleCharacterDeath(AActor* DamageCauser)
 {
 	HandleDeathEffect();
+	HandleReward(DamageCauser);
+
 	if (AMS_MainGameMode* MainGameMode = GetWorld()->GetAuthGameMode<AMS_MainGameMode>())
 	{
 		MainGameMode->RespawnCharacter(GetController(), GetHealthComponent());
@@ -198,7 +251,37 @@ void AMS_PlayerCharacter::HandleRespawnCharacter()
 	HealthComponent->RequestResetHeath();
 }
 
+void AMS_PlayerCharacter::HandleReward(AActor* RewardTo)
+{
+	const UMS_RewardSettings* RewardSettings = GetDefault<UMS_RewardSettings>();
+	if (!RewardSettings) return;
+
+	AMS_PlayerState* InstigatorPlayerState = GetPlayerState<AMS_PlayerState>();
+	if (!InstigatorPlayerState) return;
+
+	if (AMS_PlayerCharacter* PlayerCharacter = Cast<AMS_PlayerCharacter>(RewardTo))
+	{
+		if (AMS_PlayerState* RewardToPlayerState = PlayerCharacter->GetPlayerState<AMS_PlayerState>())
+		{
+			UMS_RewardSubsystem* RewardSubsystem = GetWorld()->GetSubsystem<UMS_RewardSubsystem>();
+			if (!RewardSubsystem) return;
+
+			RewardSubsystem->AddScore(RewardToPlayerState, RewardSettings->KillScore);
+			RewardSubsystem->AddKills(RewardToPlayerState, 1);
+			RewardSubsystem->AddDeath(InstigatorPlayerState, 1);
+		}
+	}
+}
+
 void AMS_PlayerCharacter::HandleDeathEffect_Implementation()
 {
 	PlayDeathEffects();
+}
+
+void AMS_PlayerCharacter::ChangeMouseSensitivity(const FInputActionValue& Value)
+{
+	const float WheelDelta = Value.Get<float>();
+
+	MouseSensitivity = FMath::Clamp(MouseSensitivity + WheelDelta * MouseSensitivityStep, MinMouseSensitivity,
+	                                MaxMouseSensitivity);
 }

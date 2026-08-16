@@ -5,18 +5,6 @@
 
 #include "Net/UnrealNetwork.h"
 
-void AMS_PlayerState::RequestDataChange()
-{
-	if (HasAuthority())
-	{
-		ChangeData();
-	}
-	else
-	{
-		ChangeDataServer();
-	}
-}
-
 void AMS_PlayerState::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -101,4 +89,25 @@ void AMS_PlayerState::ChangeReadyState()
 {
 	bIsReady = !bIsReady;
 	OnReadyStatusChanged.Broadcast(GetIsReady());
+}
+
+void AMS_PlayerState::ServerAddKills(int32 Amount)
+{
+	if (Amount <= 0) return;
+	Kills += Amount;
+	OnPlayerStatsChanged.Broadcast();
+}
+
+void AMS_PlayerState::ServerAddDeath(int32 Amount)
+{
+	if (Amount <= 0) return;
+	Deaths += Amount;
+	OnPlayerStatsChanged.Broadcast();
+}
+
+void AMS_PlayerState::ServerAddScore(int32 Amount)
+{
+	if (Amount <= 0) return;
+	PlayerScore += Amount;
+	OnPlayerStatsChanged.Broadcast();
 }

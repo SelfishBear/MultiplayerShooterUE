@@ -3,11 +3,13 @@
 
 #include "Components/MS_CombatComponent.h"
 
+#include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
 #include "Components/MS_HealthComponent.h"
 #include "Core/MS_PlayerCharacter.h"
 #include "DataAssets/MS_ShootSoundDataAsset.h"
 #include "DataAssets/MS_SurfaceVFXDataAsset.h"
+#include "Engine/SkeletalMeshSocket.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 
@@ -132,6 +134,30 @@ void UMS_CombatComponent::ApplyAimingState()
 	Character->ApplyAimingMovementSettings();
 }
 
+void UMS_CombatComponent::PlayTracer_Implementation(FVector_NetQuantize Start, FVector_NetQuantize End)
+{
+	if (!TracerEffect) return;
+
+	UNiagaraComponent* TracerComponent =
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+			GetWorld(),
+			TracerEffect,
+			Start
+		);
+
+	if (!TracerComponent) return;
+
+	TracerComponent->SetNiagaraVariableVec3(
+		TEXT("User.BeamStart"),
+		Start
+	);
+
+	TracerComponent->SetNiagaraVariableVec3(
+		TEXT("User.BeamEnd"),
+		End
+	);
+}
+
 void UMS_CombatComponent::ServerFire_Implementation(FVector_NetQuantize TraceTarget)
 {
 	PerformServerFire(TraceTarget);
@@ -142,7 +168,11 @@ void UMS_CombatComponent::PerformServerFire(const FVector& TraceTarget)
 	AMS_PlayerCharacter* Shooter =
 		Cast<AMS_PlayerCharacter>(GetOwner());
 
+
 	if (!Shooter || !Shooter->HasAuthority()) return;
+	USkeletalMeshComponent* CharacterMesh = Shooter->GetMesh();
+
+	const FVector SocketLocation = CharacterMesh->GetSocketLocation(FName("Muzzle_01"));
 
 	PlayFireCosmetics();
 	PlayShootSound();
@@ -172,8 +202,11 @@ void UMS_CombatComponent::PerformServerFire(const FVector& TraceTarget)
 
 	DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Red);
 
-	if (!bHit) return;
+	const FVector TracerEnd = bHit ? HitResult.ImpactPoint : TraceEnd;
+	PlayTracer(SocketLocation, TracerEnd);
 
+	if (!bHit) return;
+	
 	PlayHitVFX(HitResult);
 
 	AMS_PlayerCharacter* HitCharacter = Cast<AMS_PlayerCharacter>(HitResult.GetActor());
