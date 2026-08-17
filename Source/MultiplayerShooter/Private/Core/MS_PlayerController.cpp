@@ -34,6 +34,8 @@ void AMS_PlayerController::SetupInputComponent()
 		                                   &AMS_PlayerController::ShowGameInfo);
 		EnhancedInputComponent->BindAction(ShowGameInfoAction, ETriggerEvent::Completed, this,
 		                                   &AMS_PlayerController::HideGameInfo);
+		EnhancedInputComponent->BindAction(ChangeGraphicsAction, ETriggerEvent::Started, this,
+		                                   &AMS_PlayerController::ChangeGraphicsContext);
 	}
 }
 
@@ -54,4 +56,9 @@ void AMS_PlayerController::UnregisterMappingContext()
 
 	if (!EnhancedInputSubsystem) return;
 	EnhancedInputSubsystem->RemoveMappingContext(UIMappingContext);
+}
+
+void AMS_PlayerController::ChangeGraphicsContext()
+{
+	ChangeGraphics();
 }

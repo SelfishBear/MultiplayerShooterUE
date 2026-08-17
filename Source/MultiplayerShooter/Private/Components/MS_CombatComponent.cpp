@@ -25,7 +25,7 @@ void UMS_CombatComponent::TickComponent(float DeltaTime, enum ELevelTick TickTyp
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	DebugTrace();
+	// DebugTrace();
 }
 
 void UMS_CombatComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
@@ -212,11 +212,6 @@ void UMS_CombatComponent::PerformServerFire(const FVector& TraceTarget)
 
 	if (UMS_HealthComponent* HealthComponent = HitCharacter->GetHealthComponent())
 	{
-		if (GEngine)
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, "Hit Health Comp");
-		}
-
 		FDamageHitEvent DamageHitEvent = DamageEvent;
 		DamageHitEvent.DamageCauser = Shooter;
 		HealthComponent->RequestTakeDamage(DamageHitEvent);

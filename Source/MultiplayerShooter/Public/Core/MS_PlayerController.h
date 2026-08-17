@@ -24,12 +24,18 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputAction> ShowGameInfoAction;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
+	TObjectPtr<UInputAction> ChangeGraphicsAction;
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void ShowGameInfo();
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void HideGameInfo();
+	
+	UFUNCTION(BlueprintImplementableEvent)
+	void ChangeGraphics();
 
 protected:
 	virtual void BeginPlay() override;
@@ -39,4 +45,6 @@ protected:
 private:
 	void RegisterMappingContext();
 	void UnregisterMappingContext();
+	
+	void ChangeGraphicsContext();
 };
