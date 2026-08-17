@@ -72,6 +72,9 @@ public:
 	TObjectPtr<UInputAction> ReloadInputAction;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
+	TObjectPtr<UInputAction> DashInputAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputAction> MouseWheelSensitivityAction;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
@@ -88,7 +91,7 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Movement")
 	FMovementSettings MovementSettings;
-
+	
 	UFUNCTION(BlueprintCallable, Category="Health")
 	FORCEINLINE UMS_HealthComponent* GetHealthComponent() const { return HealthComponent; }
 
@@ -103,7 +106,7 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent, Category="VFX")
 	void PlayDeathEffects();
-
+	
 	void ApplyAimingMovementSettings();
 
 protected:
@@ -114,7 +117,7 @@ protected:
 	virtual void UnPossessed() override;
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
+	
 	UFUNCTION()
 	void OnCharacterCapsuleOverlap(
 		UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -136,7 +139,7 @@ private:
 
 	void Fire();
 	void Reload();
-
+	
 	void ChangeMouseSensitivity(const FInputActionValue& Value);
 
 	UFUNCTION()

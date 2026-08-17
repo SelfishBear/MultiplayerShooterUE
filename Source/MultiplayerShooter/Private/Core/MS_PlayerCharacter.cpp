@@ -23,8 +23,12 @@
 
 #include "GameFramework/CharacterMovementComponent.h"
 
+#include "GameFramework/RootMotionSource.h"
+
 #include "GameFramework/SpringArmComponent.h"
 #include "Interfaces/MS_Pickable.h"
+
+#include "Net/UnrealNetwork.h"
 
 #include "Subsystems/MS_RewardSubsystem.h"
 
@@ -207,6 +211,7 @@ void AMS_PlayerCharacter::Fire()
 	if (!CombatComponent->IsAiming()) return;
 	if (!AmmoComponent->IsEnoughAmmo()) return;
 	if (AmmoComponent->IsReloading()) return;
+	if (!CombatComponent->CanFire()) return;
 
 	AmmoComponent->RequestSpendAmmo();
 	CombatComponent->TryFire();

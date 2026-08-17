@@ -20,11 +20,21 @@ class MULTIPLAYERSHOOTER_API AMS_GameState : public AGameState
 public:
 	AMS_GameState();
 
+	void StartMatchTimer(float Duration);
+
+	UFUNCTION(BlueprintCallable, Category="Match")
+	float GetRemainingMatchTime() const;
+
 	FOnPlayerStateAdded OnPlayerStateAdded;
-	
+
 	FOnPlayerStateRemoved OnPlayerStateRemoved;
-	
+
 protected:
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	virtual void AddPlayerState(APlayerState* PlayerState) override;
 	virtual void RemovePlayerState(APlayerState* PlayerState) override;
+
+	UPROPERTY(Replicated)
+	double MatchEndServerTime = 0.0;
 };

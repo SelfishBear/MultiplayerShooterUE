@@ -83,8 +83,6 @@ void UMS_CombatComponent::HandleFireState()
 
 bool UMS_CombatComponent::TryFire()
 {
-	if (!CanFire()) return false;
-
 	HandleFireState();
 	RequestFire();
 	return true;

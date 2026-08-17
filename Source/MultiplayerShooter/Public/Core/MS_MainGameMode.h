@@ -15,7 +15,18 @@ class MULTIPLAYERSHOOTER_API AMS_MainGameMode : public AGameMode
 
 public:
 	AMS_MainGameMode();
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Match")
+	float MatchDuration = 300;
 
 	UFUNCTION(BlueprintCallable, Category="Character")
 	void RespawnCharacter(AController* Controller, UMS_HealthComponent* PlayerHealth);
+	
+protected:
+	virtual void BeginPlay() override;
+	
+private:
+	void HandleMatchOver();
+	
+	FTimerHandle MatchTimerHandle;
 };

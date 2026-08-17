@@ -4,11 +4,25 @@
 #include "Core/MS_MainGameMode.h"
 
 #include "Components/MS_HealthComponent.h"
+#include "Core/MS_GameState.h"
 #include "GameFramework/PlayerStart.h"
 #include "Kismet/GameplayStatics.h"
 
 AMS_MainGameMode::AMS_MainGameMode()
 {
+}
+
+void AMS_MainGameMode::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (AMS_GameState* MS_GameState = GetGameState<AMS_GameState>())
+	{
+		MS_GameState->StartMatchTimer(MatchDuration);
+	}
+
+	GetWorld()->GetTimerManager().SetTimer(MatchTimerHandle, this, &AMS_MainGameMode::HandleMatchOver, MatchDuration,
+	                                       false);
 }
 
 void AMS_MainGameMode::RespawnCharacter(AController* Controller, UMS_HealthComponent* PlayerHealth)
@@ -32,4 +46,9 @@ void AMS_MainGameMode::RespawnCharacter(AController* Controller, UMS_HealthCompo
 		ETeleportType::TeleportPhysics);
 
 	PlayerHealth->OnRespawned.Broadcast();
+}
+
+void AMS_MainGameMode::HandleMatchOver()
+{
+	UE_LOG(LogTemp, Warning, TEXT("AMS_MainGameMode::HandleMatchOver"));
 }
