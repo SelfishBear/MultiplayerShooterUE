@@ -108,6 +108,9 @@ public:
 	void PlayDeathEffects();
 	
 	void ApplyAimingMovementSettings();
+	
+	UFUNCTION(Client, Reliable)
+	void ClientRemoveInput();
 
 protected:
 	virtual void BeginPlay() override;

@@ -6,8 +6,10 @@
 #include "GameFramework/GameState.h"
 #include "MS_GameState.generated.h"
 
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerStateAdded, APlayerState*)
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerStateRemoved, APlayerState*)
+class AMS_PlayerState;
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerStateAdded, APlayerState*);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerStateRemoved, APlayerState*);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnWinnerChosen, APlayerState*, WinnerState);
 
 /**
  * 
@@ -22,8 +24,13 @@ public:
 
 	void StartMatchTimer(float Duration);
 
+	void SetWinnerState(AMS_PlayerState* PlayerState);
+
 	UFUNCTION(BlueprintCallable, Category="Match")
 	float GetRemainingMatchTime() const;
+	
+	UPROPERTY(BlueprintAssignable, Category="Match")
+	FOnWinnerChosen OnWinnerChosen;
 
 	FOnPlayerStateAdded OnPlayerStateAdded;
 
@@ -34,6 +41,12 @@ protected:
 
 	virtual void AddPlayerState(APlayerState* PlayerState) override;
 	virtual void RemovePlayerState(APlayerState* PlayerState) override;
+
+	UFUNCTION()
+	void OnRep_WinnerPlayerState();
+
+	UPROPERTY(ReplicatedUsing=OnRep_WinnerPlayerState)
+	APlayerState* WinnerPlayerState;
 
 	UPROPERTY(Replicated)
 	double MatchEndServerTime = 0.0;

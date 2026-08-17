@@ -3,6 +3,7 @@
 
 #include "Core/MS_GameState.h"
 
+#include "Core/MS_PlayerState.h"
 #include "Net/UnrealNetwork.h"
 
 AMS_GameState::AMS_GameState()
@@ -14,6 +15,7 @@ void AMS_GameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AMS_GameState, MatchEndServerTime);
+	DOREPLIFETIME(AMS_GameState, WinnerPlayerState);
 }
 
 void AMS_GameState::AddPlayerState(APlayerState* PlayerState)
@@ -36,6 +38,17 @@ void AMS_GameState::StartMatchTimer(float Duration)
 
 	MatchEndServerTime = GetServerWorldTimeSeconds() + Duration;
 	ForceNetUpdate();
+}
+
+void AMS_GameState::SetWinnerState(AMS_PlayerState* PlayerState)
+{
+	WinnerPlayerState = PlayerState;
+	OnWinnerChosen.Broadcast(WinnerPlayerState);
+}
+
+void AMS_GameState::OnRep_WinnerPlayerState()
+{
+	OnWinnerChosen.Broadcast(WinnerPlayerState);
 }
 
 float AMS_GameState::GetRemainingMatchTime() const

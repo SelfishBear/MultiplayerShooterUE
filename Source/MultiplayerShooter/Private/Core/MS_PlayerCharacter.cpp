@@ -240,6 +240,11 @@ void AMS_PlayerCharacter::ApplyAimingMovementSettings()
 	Movement->bOrientRotationToMovement = !CombatComponent->IsAiming();
 }
 
+void AMS_PlayerCharacter::ClientRemoveInput_Implementation()
+{
+	UnbindMappingContext();
+}
+
 void AMS_PlayerCharacter::HandleCharacterDeath(AActor* DamageCauser)
 {
 	HandleDeathEffect();
