@@ -55,16 +55,20 @@ void AMS_MainGameMode::RespawnCharacter(AController* Controller, UMS_HealthCompo
 void AMS_MainGameMode::HandleMatchOver()
 {
 	AMS_PlayerState* WinnerState = nullptr;
+
 	for (auto BasePlayerState : GameState->PlayerArray)
 	{
-		if (AMS_PlayerState* MS_PlayerState = Cast<AMS_PlayerState>(BasePlayerState))
+		if (AMS_PlayerState* MS_PlayerState = 
+			Cast<AMS_PlayerState>(BasePlayerState))
 		{
-			WinnerState = MS_PlayerState;
-			if (MS_PlayerState->GetScore() > WinnerState->GetScore())
+			if (!WinnerState || 
+				MS_PlayerState->GetScore() > WinnerState->GetScore())
 			{
 				WinnerState = MS_PlayerState;
 			}
-			if (AMS_PlayerCharacter* PlayerCharacter = Cast<AMS_PlayerCharacter>(BasePlayerState->GetPawn()))
+
+			if (AMS_PlayerCharacter* PlayerCharacter = 
+				Cast<AMS_PlayerCharacter>(BasePlayerState->GetPawn()))
 			{
 				PlayerCharacter->ClientRemoveInput();
 			}
@@ -74,11 +78,11 @@ void AMS_MainGameMode::HandleMatchOver()
 	AMS_GameState* MS_GameState = GetGameState<AMS_GameState>();
 	MS_GameState->SetWinnerState(WinnerState);
 
-	GetWorld()->GetTimerManager().SetTimer(MatchTimerHandle, this, &AMS_MainGameMode::Travel, TimeBeforeLobbyQuit,
-	                                       false, TimeBeforeLobbyQuit);
-
-
-	UE_LOG(LogTemp, Warning, TEXT("AMS_MainGameMode::HandleMatchOver"));
+	GetWorld()->GetTimerManager().SetTimer(
+		MatchTimerHandle, this,
+		&AMS_MainGameMode::Travel,
+		TimeBeforeLobbyQuit, false, TimeBeforeLobbyQuit
+	);
 }
 
 void AMS_MainGameMode::Travel()
